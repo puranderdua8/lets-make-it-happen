@@ -6,3 +6,5 @@ next-env.d.ts
 coverage/
 *.log
 .DS_Store
+web/AGENTS.md
+web/CLAUDE.md
