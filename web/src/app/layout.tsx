@@ -7,7 +7,7 @@ import { getSession } from '@/lib/session';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Virtual Events',
+  title: "Let's Make It Happen",
   description: 'Browse, organize, and join virtual events',
 };
 
@@ -21,7 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
             <div className="flex items-center gap-6">
               <Link href="/" className="text-lg font-semibold text-indigo-700">
-                Virtual Events
+                Let&apos;s Make It Happen
               </Link>
               {session && (
                 <div className="flex items-center gap-4 text-sm text-slate-600">

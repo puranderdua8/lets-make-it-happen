@@ -58,7 +58,9 @@ MONGODB_URI=mongodb://127.0.0.1:27017/virtual-events?directConnection=true
 REDIS_URL=redis://127.0.0.1:6379
 ```
 
-Leave `REDIS_URL` unset to run without Redis — caching, rate limiting, and email sending then use in-process fallbacks, which is fine for local development. **If you do set `REDIS_URL`, start Redis before the API** — otherwise the log fills with connection errors, cache/queue operations fail, and queued emails go nowhere.
+Leave `REDIS_URL` unset to run without Redis — caching, rate limiting, and email sending then use in-process fallbacks, which is fine for local development and for running a single instance in production with no load balancer. **If you do set `REDIS_URL`, start Redis before the API** — otherwise the log fills with connection errors, cache/queue operations fail, and queued emails go nowhere.
+
+> **Scaling later?** `REDIS_URL` and `WEB_CONCURRENCY` are independent config flags, not code you need to change — set them when you actually add a second process or instance. If you set `WEB_CONCURRENCY > 1` (or run multiple instances behind a load balancer) **without** `REDIS_URL`, rate limiting and the cache stay per-process instead of shared, which quietly defeats both (e.g. an abusive IP gets `N ×` the intended request budget). For production Redis, use a managed/HA instance over TLS: `REDIS_URL=rediss://default:<password>@<host>:<port>` (note the `rediss://` scheme, not `redis://`).
 
 Event data persists in the `mongo-data` Docker volume across restarts; `docker compose down -v` wipes it for a fresh start.
 
@@ -134,7 +136,7 @@ npm run web:start      # frontend production server
 | `JWT_EXPIRES_IN` | `1h` | Token lifetime |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | _unset_ | Optional real SMTP server. If unset, an Ethereal test account is created and preview URLs are logged |
 | `EMAIL_FROM` | `Virtual Events <no-reply@virtual-events.local>` | From address |
-| `REDIS_URL` | _unset_ | Enables the event read-cache, cross-instance rate limiting, and the durable BullMQ email queue. Unset = in-process fallbacks |
+| `REDIS_URL` | _unset_ | Enables the event read-cache, cross-instance rate limiting, and the durable BullMQ email queue. Unset = in-process fallbacks (simple/single-instance mode). Set once you scale to `WEB_CONCURRENCY > 1` or multiple instances. Production: managed/HA Redis over TLS, e.g. `rediss://default:<password>@<host>:<port>` |
 | `WEB_CONCURRENCY` | `1` | Number of clustered API processes (set to CPU count in production) |
 | `AUTH_RATE_LIMIT_MAX` | `10` | Max `/register` + `/login` requests per IP per minute |
 | `GLOBAL_RATE_LIMIT_MAX` | `1000` | Max requests per IP per minute across the API |
