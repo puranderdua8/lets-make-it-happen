@@ -70,6 +70,8 @@ npm run web:dev    # frontend on   http://localhost:3001
 npm run worker     # optional: email worker (only with REDIS_URL set)
 ```
 
+The backend prints a config summary at boot (MongoDB target, Redis on/off, email mode) — if behavior ever seems off, that summary is the first thing to check. `.env` is read once at startup, so restart the server after changing it. Note: once `REDIS_URL` is set, emails go through the queue, so the worker must be running for them to send.
+
 ### 5. Use it
 
 Open **http://localhost:3001**, sign up (choose *Organize events* to get the organizer role), and create your first event. To try both roles, register a second account as an attendee in a private/incognito window.
@@ -79,11 +81,12 @@ Emails: without SMTP credentials the backend auto-provisions an [Ethereal](https
 ### All backend scripts
 
 ```bash
-npm run dev            # backend with hot reload
-npm run test           # Jest suite (needs no MongoDB/Redis/Docker)
+npm run dev            # backend with hot reload (restart manually after .env changes)
+npm run test           # Jest suite (needs no MongoDB/Redis/Docker; ignores your .env)
 npm run build          # compile TypeScript to dist/
 npm start              # run the compiled server
 npm run worker         # BullMQ email worker (requires REDIS_URL)
+npm run worker:prod    # compiled email worker (after npm run build)
 npm run typecheck      # type-check without emitting
 npm run web:dev        # frontend dev server (proxies npm --prefix web)
 npm run web:build      # frontend production build

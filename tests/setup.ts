@@ -1,4 +1,6 @@
 // Must be set before src/config.ts is first imported by the test files.
+// (config.ts also skips loading .env under NODE_ENV=test, so the local
+// .env's real MongoDB/Redis settings can never leak into the suite.)
 process.env.RATE_LIMIT_DISABLED = '1';
 delete process.env.REDIS_URL;
 

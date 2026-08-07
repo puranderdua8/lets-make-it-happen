@@ -1,4 +1,11 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+
+// Tests must be hermetic: they run against an in-memory MongoDB with all
+// Redis features disabled, so the developer's .env (real Atlas/Redis
+// credentials) must never leak into them. Jest sets NODE_ENV=test.
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config();
+}
 
 export const config = {
   port: Number(process.env.PORT ?? 3000),
