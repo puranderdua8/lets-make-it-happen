@@ -43,6 +43,8 @@ cp web/.env.example web/.env   # frontend config (BACKEND_URL=http://localhost:3
 
 The defaults work out of the box with the Docker setup below. If you use Atlas or a local `mongod` instead, set `MONGODB_URI` in `.env` accordingly.
 
+Also set a real `JWT_SECRET` (generate one with `openssl rand -hex 32`) — the built-in fallback is insecure and for quick local hacking only.
+
 ### 3. Start MongoDB (and optionally Redis)
 
 ```bash
@@ -56,9 +58,21 @@ MONGODB_URI=mongodb://127.0.0.1:27017/virtual-events?directConnection=true
 REDIS_URL=redis://127.0.0.1:6379
 ```
 
-Leave `REDIS_URL` unset to run without Redis — caching, rate limiting, and email sending then use in-process fallbacks, which is fine for local development.
+Leave `REDIS_URL` unset to run without Redis — caching, rate limiting, and email sending then use in-process fallbacks, which is fine for local development. **If you do set `REDIS_URL`, start Redis before the API** — otherwise the log fills with connection errors, cache/queue operations fail, and queued emails go nowhere.
+
+Event data persists in the `mongo-data` Docker volume across restarts; `docker compose down -v` wipes it for a fresh start.
 
 > **Port already taken?** If another Redis owns 6379, remap ours: `REDIS_PORT=6380 docker compose up -d` and set `REDIS_URL=redis://127.0.0.1:6380`.
+
+**Using MongoDB Atlas instead of Docker** — set:
+
+```
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster-host>/virtual-events?retryWrites=true&w=majority
+```
+
+Two Atlas gotchas:
+1. **Include the `/virtual-events` database name in the URI.** Without a path segment, Mongoose silently writes to a database literally named `test`.
+2. **Add your IP under Atlas → Network Access**, or every connection attempt will hang and time out.
 
 ### 4. Start the apps
 
@@ -77,6 +91,23 @@ The backend prints a config summary at boot (MongoDB target, Redis on/off, email
 Open **http://localhost:3001**, sign up (choose *Organize events* to get the organizer role), and create your first event. To try both roles, register a second account as an attendee in a private/incognito window.
 
 Emails: without SMTP credentials the backend auto-provisions an [Ethereal](https://ethereal.email) test inbox — watch the backend (or worker) terminal for **preview URLs** of every welcome/confirmation email.
+
+### Troubleshooting
+
+The backend prints a **config summary at boot** (MongoDB target, Redis mode, email mode) — when anything below happens, check that summary first to see what the server is *actually* configured with.
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Changed `.env` but behavior didn't change | `.env` is read **once at startup** | Restart the server (`npm run dev` does not watch `.env`) |
+| Log spams `Redis error: connect ECONNREFUSED` | `REDIS_URL` is set but Redis isn't running | Start Redis first (`docker compose up -d`), or unset `REDIS_URL` to use in-process fallbacks |
+| Emails never arrive while Redis is enabled | With `REDIS_URL` set, emails are queued — a worker must consume them | Run `npm run worker` in a separate terminal |
+| No email seems to be "sent" at all | No SMTP configured — that's the Ethereal fallback | Look for the preview URL in the backend/worker logs, or set the `SMTP_*` variables for real delivery |
+| `429 Too many requests` while testing signup/login | Auth endpoints are rate-limited to 10 requests/min/IP | Wait a minute, or raise `AUTH_RATE_LIMIT_MAX` in `.env` |
+| Data lands in a database named `test` (Atlas) | `MONGODB_URI` has no database path segment | Append `/virtual-events` to the URI |
+| Atlas connection hangs, then times out | Your IP isn't allowlisted | Atlas → Network Access → add your current IP |
+| `Bind for 0.0.0.0:6379 failed: port is already allocated` | Another local Redis owns 6379 | `REDIS_PORT=6380 docker compose up -d` + `REDIS_URL=redis://127.0.0.1:6380` |
+| Compose Mongo unhealthy after recreating containers | Stale replica-set state in the `mongo-data` volume | `docker compose down -v && docker compose up -d` (wipes local data) |
+| Tests behave differently from the dev server | Intentional — tests **ignore `.env`** | Tests always run hermetically: in-memory MongoDB, Redis features off, rate limiting disabled, email mocked |
 
 ### All backend scripts
 
