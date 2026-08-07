@@ -1,0 +1,25 @@
+services:
+  mongo:
+    image: mongo:8
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    healthcheck:
+      # Initiates the single-node replica set on first run, then reports health.
+      # The member host is pinned to localhost so the config survives container
+      # recreation (container hostnames change on every recreate).
+      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]}).ok }"]
+      interval: 5s
+      timeout: 30s
+      retries: 30
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:8
+    ports:
+      # Override with REDIS_PORT if 6379 is taken on the host.
+      - "${REDIS_PORT:-6379}:6379"
+
+volumes:
+  mongo-data:
