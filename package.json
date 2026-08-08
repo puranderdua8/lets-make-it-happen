@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "worker": "tsx src/workers/email.worker.ts",
     "worker:prod": "node dist/workers/email.worker.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p netlify/tsconfig.json",
     "test": "jest --runInBand",
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",
