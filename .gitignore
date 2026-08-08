@@ -8,3 +8,6 @@ coverage/
 .DS_Store
 web/AGENTS.md
 web/CLAUDE.md
+
+# Local Netlify folder
+.netlify

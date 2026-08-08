@@ -37,6 +37,21 @@ export async function deliverEmail(job: EmailJob): Promise<void> {
 }
 
 /**
+ * Sends or enqueues the email, never throwing into the caller. With
+ * config.emailAwait (serverless), completion is awaited so the send survives
+ * the platform freezing the process after the response; otherwise it's
+ * fire-and-forget with error logging.
+ */
+export async function dispatchEmail(job: EmailJob): Promise<void> {
+  const pending = enqueueEmail(job).catch((err) => {
+    console.error(`Failed to send ${job.type} email to ${job.to}:`, err);
+  });
+  if (config.emailAwait) {
+    await pending;
+  }
+}
+
+/**
  * Enqueues the email for the worker process (durable, retried with backoff).
  * Without Redis, degrades to sending directly in-process.
  */

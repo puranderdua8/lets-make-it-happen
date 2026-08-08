@@ -1,0 +1,6 @@
+# Netlify config for the web site (base = web/). Next.js is auto-detected;
+# this file exists so this site does not inherit the repo-root netlify.toml
+# (which configures the separate API site's functions and redirects).
+
+[build]
+  command = "npm run build"

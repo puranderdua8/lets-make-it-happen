@@ -1,0 +1,32 @@
+# Netlify config for the API site (base = repo root).
+# The web/ frontend deploys as a SEPARATE Netlify site with base "web/",
+# which uses web/netlify.toml instead of this file.
+
+[build]
+  command = "npm run typecheck"
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
+  # Runtime deps are shipped from node_modules instead of being bundled —
+  # bcrypt is a native module and cannot be inlined by esbuild.
+  external_node_modules = [
+    "express",
+    "mongoose",
+    "mongodb",
+    "bcrypt",
+    "jsonwebtoken",
+    "nodemailer",
+    "bullmq",
+    "ioredis",
+    "express-rate-limit",
+    "rate-limit-redis",
+    "dotenv",
+    "serverless-http"
+  ]
+
+[[redirects]]
+  force = true
+  from = "/api/*"
+  status = 200
+  to = "/.netlify/functions/api/:splat"

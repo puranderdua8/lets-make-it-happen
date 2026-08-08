@@ -236,6 +236,44 @@ To run it, follow [Running locally](#running-locally) above — `npm run web:dev
 - **Open-redirect safety** — the post-login `?next=` target is only honored for same-origin paths.
 - **No error leakage** — backend errors are mapped to friendly messages; stacks and internals never reach the browser.
 
+## Deploying to Netlify
+
+The repo deploys as **two Netlify sites** from the same GitHub repository — the API runs as a Netlify Function ([netlify/functions/api.ts](netlify/functions/api.ts), the Express app wrapped with `serverless-http`), and the Next.js frontend deploys with Netlify's automatic Next.js support.
+
+### Site 1 — API
+
+Import the GitHub repo in Netlify; leave the **base directory empty** (repo root). Build settings come from [netlify.toml](netlify.toml). Set these environment variables (Site configuration → Environment variables):
+
+| Variable | Value |
+| --- | --- |
+| `MONGODB_URI` | Atlas URI **including** the `/virtual-events` database segment |
+| `JWT_SECRET` | long random string (`openssl rand -hex 32`) |
+| `JWT_EXPIRES_IN` | `1h` |
+| `EMAIL_AWAIT` | `1` — **required on serverless**: awaits email delivery in-request, since the platform freezes the function right after responding (fire-and-forget sends would be lost) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | your SMTP provider's credentials for real email delivery |
+| `EMAIL_FROM` | e.g. `Virtual Events <you@yourdomain.com>` |
+
+Do **not** set `REDIS_URL`: Netlify has no long-running processes, so the BullMQ worker can't run there — the API deploys in simple mode (no read cache, per-instance in-memory rate limits, emails sent in-request). The API is served at `https://<api-site>.netlify.app/api/...`.
+
+In **MongoDB Atlas → Network Access**, allow `0.0.0.0/0` — function egress IPs are dynamic.
+
+### Site 2 — Web
+
+Import the same repo as a second site with **base directory `web`**. Next.js is auto-detected (zero config, [web/netlify.toml](web/netlify.toml)). One environment variable:
+
+| Variable | Value |
+| --- | --- |
+| `BACKEND_URL` | `https://<api-site-name>.netlify.app/api` |
+
+Every `git push` to `main` then deploys both sites automatically.
+
+### Serverless trade-offs to be aware of
+
+- **Cold starts** add ~1–3s to the first request after idle (Mongo connection is cached per warm container).
+- **Rate limiting is per-instance** without Redis, and per-IP keys trust forwarded headers — fine for a demo, not a hard security boundary.
+- **Function timeout** is 10s by default; bcrypt (~100ms) + awaited SMTP (~1–2s) fit comfortably.
+- Scaled mode (Redis cache, queue + worker) needs a platform with persistent processes — or Upstash Redis plus a scheduled queue-drain function on Netlify — and is intentionally out of scope for this deployment.
+
 ## Scalability notes
 
 The design targets a read-heavy workload (event browsing dominates; writes are bursty around registration opens):

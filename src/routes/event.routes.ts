@@ -6,7 +6,7 @@ import { authenticate, requireOrganizer } from '../middleware/auth';
 import { EventModel, type EventDocument } from '../models/event.model';
 import { RegistrationModel } from '../models/registration.model';
 import { UserModel } from '../models/user.model';
-import { enqueueEmail } from '../queues/email.queue';
+import { dispatchEmail } from '../queues/email.queue';
 import { cacheGet, cacheInvalidate, cacheSet } from '../services/cache.service';
 
 const POPULATE_FIELDS = 'name email role';
@@ -170,13 +170,11 @@ eventRouter.post('/:id/register', async (req, res) => {
 
   const user = await UserModel.findById(userId);
   if (user) {
-    enqueueEmail({
+    await dispatchEmail({
       type: 'event-registration',
       to: user.email,
       name: user.name,
       event: { title: event.title, date: event.date, time: event.time },
-    }).catch((err) => {
-      console.error(`Failed to enqueue registration email for ${user.email}:`, err);
     });
   }
 

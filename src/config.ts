@@ -13,6 +13,9 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET ?? 'dev-only-insecure-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h',
   redisUrl: process.env.REDIS_URL,
+  // Await email delivery inside the request instead of fire-and-forget.
+  // Required on serverless platforms (a frozen function kills pending sends).
+  emailAwait: process.env.EMAIL_AWAIT === '1',
   webConcurrency: Number(process.env.WEB_CONCURRENCY ?? 1),
   rateLimit: {
     disabled: process.env.RATE_LIMIT_DISABLED === '1',

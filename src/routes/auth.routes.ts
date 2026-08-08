@@ -6,7 +6,7 @@ import { config } from '../config';
 import { HttpError } from '../errors';
 import { authLimiter } from '../middleware/rate-limit';
 import { USER_ROLES, UserModel, type UserDocument, type UserRole } from '../models/user.model';
-import { enqueueEmail } from '../queues/email.queue';
+import { dispatchEmail } from '../queues/email.queue';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -48,9 +48,7 @@ authRouter.post('/register', authLimiter, async (req, res) => {
     role: role as UserRole | undefined,
   });
 
-  enqueueEmail({ type: 'welcome', to: user.email, name: user.name }).catch((err) => {
-    console.error(`Failed to enqueue welcome email for ${user.email}:`, err);
-  });
+  await dispatchEmail({ type: 'welcome', to: user.email, name: user.name });
 
   res.status(201).json({ user: user.toJSON(), token: signToken(user) });
 });
